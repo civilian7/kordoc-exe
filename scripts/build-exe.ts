@@ -94,6 +94,22 @@ const PATCHES: Patch[] = [
     to: `const candidates = [\n    join(dirname(process.execPath), "templates"),`,
   },
   {
+    // Bun 의 node:crypto 에는 des-ede3-ecb 가 없다 — HWP3 암호 문서가 맞는 암호로도
+    // 「문서 처리 중 오류」(ERR_CRYPTO_UNKNOWN_CIPHER)로 실패했다. 순수 JS DES 로 바꾼다.
+    // 대조: node --import tsx scripts/des-ecb.test.mts
+    name: "HWP3 DES 복호화 → 순수 JS",
+    file: /[\\/]src[\\/]hwp3[\\/]crypto\.ts$/,
+    from: /const decipher = createDecipheriv\("des-ede3-ecb", Buffer\.concat\(\[key, key, key\]\), null\)\s*decipher\.setAutoPadding\(false\)\s*return Buffer\.concat\(\[decipher\.update\(data\), decipher\.final\(\)\]\)/,
+    to: "return __desEcbDecryptPure(data, key)",
+  },
+  {
+    // 위 치환이 부르는 함수를 들여온다 — 이 저장소의 scripts/des-ecb.ts.
+    name: "HWP3 DES 들여오기",
+    file: /[\\/]src[\\/]hwp3[\\/]crypto\.ts$/,
+    from: `import { createDecipheriv } from "crypto"`,
+    to: `import { desEcbDecryptPure as __desEcbDecryptPure } from ${JSON.stringify(join(import.meta.dir, "des-ecb.ts").replace(/\\/g, "/"))}`,
+  },
+  {
     // pdfjs 는 Node 에서 무조건 @napi-rs/canvas 를 require 하는데 exe 에는 네이티브 바인딩이 없어
     // 경고 4줄이 stdout 으로 새어 변환 결과를 오염시킨다. 텍스트 추출엔 쓰지 않는 블록이다.
     name: "pdfjs canvas 폴리필 끄기",

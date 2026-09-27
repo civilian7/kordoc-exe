@@ -34,6 +34,8 @@ if (-not $Hwpx) { $Hwpx = "$REPO\tests\fixtures\dummy.hwpx" }
 if (-not $Xls) { $Xls = "$REPO\tests\fixtures\xls\roster.xls" }
 if (-not $Image) { $Image = "$REPO\docs\video-demo.jpg" }
 $PWD5 = "$REPO\tests\fixtures\password\HWP5-password-123456.hwpx"
+# ★HWP3 암호는 DES 라 Bun 의 node:crypto 로는 못 푼다 — build-exe.ts 가 순수 JS DES 로 바꿔 끼운 것을 잰다
+$PWD3 = "$REPO\tests\fixtures\password\HWP3-password-123456.hwp"
 
 if (-not (Test-Path "$ROOT\out\kordoc.exe")) {
   throw 'out\kordoc.exe 가 없습니다 — 먼저 bun scripts/build-exe.ts'
@@ -167,6 +169,8 @@ if ($Pdf.Count -gt 0) {
 }
 Test-K '암호 맞음' @('--silent', '--password', '123456', '--', $PWD5)
 Test-K '암호 틀림' @('--silent', '--password', '000000', '--', $PWD5)
+Test-K 'HWP3 암호 맞음' @('--silent', '--password', '123456', '--', $PWD3)
+Test-K 'HWP3 암호 틀림' @('--silent', '--password', '000000', '--', $PWD3)
 
 # ── 2. 생성·편집 ──
 Test-K 'generate md → hwpx' @('generate', $MD, '-o', '{W}\gen.hwpx', '--preset', '보고서') { param($d) Reparse "$d\gen.hwpx" }
