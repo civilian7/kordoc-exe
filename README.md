@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| 참조하는 원본 | `chrisryugj/kordoc` @ `6266d4e` (v4.14.4) |
+| 참조하는 원본 | `chrisryugj/kordoc` @ `bf53887` (v4.15.6 + 손상 PDF 무한 루프 수정) |
 | 대상 | Windows x64 |
 | 산출물 | `kordoc.exe`(CLI) · `kordoc-mcp.exe`(MCP 서버), 각 약 113MB |
 
@@ -80,6 +80,16 @@ exe 를 node_modules 가 없는 임시 폴더로 옮겨, 같은 명령을 **exe*
 v4.14.4 실측: 실제 문서를 넣어 **32/32 일치** — 파싱 7형식(HWPX·HWP5·PDF 2·DOCX·XLSX·XLS)과
 `--format json/chunks`·`-p`·`-o`·`-d`·암호, `generate`·`validate`·`lint`·`profile`·`fill`·`patch`·
 `seal`·`redact`·`render svg/html/pdf`·`tables`·`parse-worker`·`mcp`. exe 는 기동이 빨라 파일당 약 1.5~2배 빠릅니다.
+
+v4.15.6 실측(2026-09-28): fixtures **21/21 일치**. 치환 네 곳 모두 새 소스에 그대로 걸렸다.
+rhwp `samples/` 975건(HWP 536·HWPX 439) 파싱: 성공 972건, 실패 3건은 모두 암호 문서 —
+그중 **암호 걸린 HWPX 는 끝나지 않는다**(upstream 결함, 호출하는 쪽에서 미리 걸러야 한다).
+
+## 릴리스
+
+GitHub 릴리스 `v<판>` 에 `kordoc-<판>-windows-x64.zip` 을 붙인다 — `out/` 에서 `kordoc-mcp.exe` 를
+뺀 것을 **폴더 구조 그대로** 담는다(루트에 `kordoc.exe`·`pdfjs/`·`templates/`). LumiMD 가 이 이름으로
+내려받는다(`LumiMD.Plugins` 의 `KORDOC_VER`).
 
 ## upstream 올리기
 
