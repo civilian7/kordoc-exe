@@ -110,6 +110,31 @@ const PATCHES: Patch[] = [
     to: `import { desEcbDecryptPure as __desEcbDecryptPure } from ${JSON.stringify(join(import.meta.dir, "des-ecb.ts").replace(/\\/g, "/"))}`,
   },
   {
+    // --password <pw> 는 암호를 명령줄에 싣는다 — 같은 사용자의 어떤 프로그램이든 프로세스 명령줄
+    // (작업 관리자 「명령줄」 칸·WMI Win32_Process)에서 읽고, 감사 로그(이벤트 4688)에도 남는다.
+    // 호스트 앱(LumiMD)이 암호를 표준 입력으로 넘길 수 있게 옵션을 더한다. upstream 의 parse-worker 는
+    // stdin 으로 받지만 파일 쓰기(-o·그림 폴더)를 하지 않아 호스트가 다시 구현해야 하므로 이 길을 택했다.
+    name: "--password-stdin 옵션",
+    file: /[\\/]src[\\/]cli\.ts$/,
+    from: `.option("--no-images",`,
+    to: `.option("--password-stdin", "열기 암호를 표준 입력의 첫 줄에서 읽음 — 명령줄에 남지 않게 (kordoc-exe)")\n  .option("--no-images",`,
+  },
+  {
+    name: "--password-stdin 읽기",
+    file: /[\\/]src[\\/]cli\.ts$/,
+    from: `if (opts.password) parseOptions.password = opts.password as string`,
+    to: `if (opts.passwordStdin) parseOptions.password = __kordocExePasswordStdin()\n        else if (opts.password) parseOptions.password = opts.password as string`,
+  },
+  {
+    // 여러 파일을 줘도 표준 입력은 한 번만 읽는다(두 번째부터는 기억한 값). 첫 줄만 쓰고 줄 끝을 뗀다.
+    // ★동기로 읽는다 — 액션 안에서 Bun.stdin.text() 를 await 하면 컴파일한 exe 가 출력 없이 0 으로 끝났다
+    //   (2026-10-03 실측). cli.ts 가 이미 들여오는 readFileSync 로 fd 0 을 끝까지 읽는다.
+    name: "--password-stdin 도우미",
+    file: /[\\/]src[\\/]cli\.ts$/,
+    from: `const program = new Command()`,
+    to: `let __kordocExePw: string | undefined\nconst __kordocExePasswordStdin = (): string =>\n  (__kordocExePw ??= readFileSync(0, "utf-8").split(/\\r?\\n/)[0] ?? "")\n\nconst program = new Command()`,
+  },
+  {
     // pdfjs 는 Node 에서 무조건 @napi-rs/canvas 를 require 하는데 exe 에는 네이티브 바인딩이 없어
     // 경고 4줄이 stdout 으로 새어 변환 결과를 오염시킨다. 텍스트 추출엔 쓰지 않는 블록이다.
     name: "pdfjs canvas 폴리필 끄기",

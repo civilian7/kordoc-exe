@@ -172,6 +172,28 @@ Test-K '암호 틀림' @('--silent', '--password', '000000', '--', $PWD5)
 Test-K 'HWP3 암호 맞음' @('--silent', '--password', '123456', '--', $PWD3)
 Test-K 'HWP3 암호 틀림' @('--silent', '--password', '000000', '--', $PWD3)
 
+# ★--password-stdin 은 kordoc-exe 가 더한 옵션이라 node(원본)에는 없다 — exe 끼리 견준다:
+#   표준 입력으로 준 암호의 결과가 --password 로 준 결과와 같아야 한다.
+foreach ($case in @(
+    @{ Name = '암호 stdin 맞음'; File = $PWD5; Pw = '123456' },
+    @{ Name = '암호 stdin 틀림'; File = $PWD5; Pw = '000000' },
+    @{ Name = 'HWP3 암호 stdin 맞음'; File = $PWD3; Pw = '123456' })) {
+  $byArg = Invoke-K 'exe' @('--silent', '--password', $case.Pw, '--', $case.File)
+  $byIn = Invoke-K 'exe' @('--silent', '--password-stdin', '--', $case.File) $case.Pw
+  $flat = $byIn.Out -replace '\s+', ' '
+  $results.Add([pscustomobject]@{
+      Test     = $case.Name
+      Same     = ($byIn.Out -eq $byArg.Out) -and ($byIn.Code -eq $byArg.Code)
+      ExeCode  = $byIn.Code
+      NodeCode = $byArg.Code
+      ExeLen   = $byIn.Out.Length
+      NodeLen  = $byArg.Out.Length
+      ExeMs    = $byIn.Ms
+      NodeMs   = $byArg.Ms
+      Head     = $flat.Substring(0, [Math]::Min(120, $flat.Length))
+    })
+}
+
 # ── 2. 생성·편집 ──
 Test-K 'generate md → hwpx' @('generate', $MD, '-o', '{W}\gen.hwpx', '--preset', '보고서') { param($d) Reparse "$d\gen.hwpx" }
 Test-K 'validate' @('validate', '{W}\gen.hwpx')

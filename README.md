@@ -45,7 +45,7 @@ out/
 ## 원본을 그대로 컴파일하면 안 되는 이유
 
 `bun build src/cli.ts --compile` 은 통과하지만 실행하면 곧바로 죽습니다. 빌드 스크립트가
-번들 로드 시점에 다음 네 곳을 치환합니다.
+번들 로드 시점에 다음 곳들을 치환합니다.
 
 | 증상 | 원인 | 처리 |
 |---|---|---|
@@ -53,6 +53,13 @@ out/
 | 한글 CID 폰트 PDF 의 글자가 **조용히** 빠짐 | exe 안에서 `require.resolve("pdfjs-dist/…")` 실패를 `catch` 가 삼킴 | exe 옆 `pdfjs/` 에서 읽음 |
 | `fill --template` 이 서식을 못 찾음 | `import.meta.url` 이 가상 경로(`B:\~BUN\root`) | exe 옆 `templates/` 를 후보에 추가 |
 | PDF 변환 결과 앞에 경고 4줄이 섞임 | pdfjs 가 `@napi-rs/canvas` 를 찾다 실패해 **stdout** 으로 경고 | 텍스트 추출엔 불필요한 그 블록을 끔 |
+| HWP3 암호 문서가 맞는 암호로도 실패 | Bun 의 `node:crypto` 에 `des-ede3-ecb` 가 없음 | 순수 JS DES(`scripts/des-ecb.ts`)로 |
+
+기능을 **더하는** 치환이 하나 있습니다(upstream 에 없는 옵션).
+
+| 옵션 | 왜 |
+|---|---|
+| `--password-stdin` | `--password <pw>` 는 암호를 명령줄에 싣는다 — 같은 사용자의 어떤 프로그램이든 프로세스 명령줄(작업 관리자·WMI)에서 읽고 감사 로그(이벤트 4688)에도 남는다. 호스트 앱(LumiMD)이 암호를 표준 입력으로 넘기게 한다. upstream 의 `parse-worker` 도 stdin 으로 받지만 파일 쓰기(`-o`·그림 폴더)를 하지 않아 호스트가 그것을 다시 짜야 한다 |
 
 치환 대상 문자열이 upstream 에서 사라지면 빌드가 **실패**합니다(조용히 넘어가지 않습니다).
 upstream 을 올린 뒤 빌드가 여기서 멈추면 해당 치환을 새 소스에 맞게 고치면 됩니다.
@@ -99,6 +106,7 @@ kordoc 비밀.hwpx --password 1234
 | `--image-refs` | `--format json` 에서 그림 바이트 대신 `images/<파일명>` 참조만(그림 수백 장 문서용, `-o`/`-d` 와 함께) |
 | `--no-images` | 그림을 뽑지 않는다(자리 표시는 남김). PDF 는 PNG 인코딩을 건너뛰어 빨라진다 |
 | `--password <pw>` | 열기 암호(HWPX·HWP3·HWP5). 한컴 DRM 문서는 해당 없음 |
+| `--password-stdin` | 열기 암호를 **표준 입력의 첫 줄**에서 읽는다 — 명령줄에 남지 않는다(이 exe 에만 있음). 예: `"1234" \| kordoc 비밀.hwpx --password-stdin` |
 | `--silent` | 진행 메시지 숨김(오류는 stderr 로 그대로) |
 | ★`--ocr` · `--ocr-force` · `--formula-ocr` | 스캔 PDF 글자 OCR · 전 쪽 강제 OCR · 수식 OCR |
 
@@ -251,6 +259,9 @@ v4.14.4 실측: 실제 문서를 넣어 **32/32 일치** — 파싱 7형식(HWPX
 v4.15.6 실측(2026-09-28): fixtures **21/21 일치**. 치환 네 곳 모두 새 소스에 그대로 걸렸다.
 rhwp `samples/` 975건(HWP 536·HWPX 439) 파싱: 성공 972건, 실패 3건은 모두 암호 문서 —
 그중 **암호 걸린 HWPX 는 끝나지 않는다**(upstream 결함, 호출하는 쪽에서 미리 걸러야 한다).
+
+2026-10-03: `--password-stdin` 을 더하며 **26/26 일치**. 그 옵션은 원본에 없어 exe 끼리 견준다 —
+표준 입력으로 준 암호의 결과가 `--password` 로 준 결과와 같아야 한다(HWPX 맞음·틀림, HWP3 맞음).
 
 ## 릴리스
 
